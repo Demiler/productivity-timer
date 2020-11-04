@@ -1,4 +1,5 @@
 import { LitElement, html, css } from 'lit-element'
+import { style } from '../css/app-style.js'
 
 const Statuses = Object.freeze({
   WaitForResponse: "waiting-for-response",
@@ -7,61 +8,16 @@ const Statuses = Object.freeze({
   TimeIsOut: "time-is-out",
 });
 
+const setImInterval = (func, delay, ...args) => {
+  func(...args);
+  return setInterval(func, delay, ...args);
+}
+
 const minToMill = (mins) => { return mins * 60000 };
 
 class Cucu extends LitElement {
   static get styles() {
-    return css`
-      :host {
-        display: flex;
-        width: 500px;
-        height: 500px;
-        color: white;
-        padding: 10px;
-
-        align-items: center;
-        justify-content: space-evenly;
-        flex-direction: column;
-
-        padding-top: 120px;
-        padding-bottom: 120px;
-        box-sizing: border-box;
-
-        font-size: 30px;
-        border-radius: 10px;
-      }
-
-      #time {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      #time.time-is-out {
-        color: #cc1233;
-      }
-
-      button {
-        display: block;
-        border: none;
-        border-radius: 5px;
-        font-size: inherit;
-        outline: none;
-
-        padding: 10px;
-        width: 80%;
-
-        background-color: #3a50a1;
-        color: #eee;
-        margin-bottom: 10px;
-
-        transition: .2s;
-      }
-
-      button:hover {
-        filter: brightness(1.2) hue-rotate(10deg);
-      }
-    `;
+    return style;
   }
 
   static get properties() {
@@ -72,86 +28,168 @@ class Cucu extends LitElement {
 
   constructor() {
     super();
-    this.period = minToMill(1/10); //min
+    this.Statuses = {
+      choosingAction: "choosing-action",
+    };
+
+    this.periods = [ 15, 10, 1/10, 25, 45 ];
+
+    this.period = minToMill(15); //min
     this.curTime = this.period;
     this.status = Statuses.WaitForResponse;
+    this.sound = new Audio("../assets/sound.wav");
 
-    this.actions = [ "Start", "Nothing" ];
+    this.actions = [ "Work", "Break" ];
+    this.action = {
+      title: "Time to work",
+      name: "Work",
+      oppsiteName: "Break",
+      action: '',
+      id: 0
+    }
   }
 
   render() {
     return html`
-      <div id="time" class="${this.status}">${this.showTime(this.curTime)}</div>
-      <button id="action1" @click=${() => this.playAction(this.actions[0])}>
-        ${this.actions[0]}</button>
-      <button id="action2" @click=${() => this.playAction(this.actions[1])}>
-        ${this.actions[1]}</button>
+      <div class="container">
+        ${this.drawCurrentStatus()}
+      </div>
     `;
   }
 
-  countDown() {
-    let now = new Date().getTime();
-    this.curTime = this.endTime - now;
-    if (this.curTime <= 0)
-      this.timeIsOut();
+  drawCurrentStatus() {
+    switch (this.status) {
+      case Statuses.WaitForResponse:
+        return this.chooseAction();
+      case Statuses.CountDown:
+        return this.doCountDown();
+      case Statuses.TimeIsOut:
+        return this.timeOut();
+      default:
+        return html`<div>Hi</div>`;
+    }
   }
 
-  startTimer() {
-    this.actions = [ "Reset", "Pause" ];
-    this.endTime = new Date().getTime() + this.period;
-    this.timer = setInterval(() => this.countDown(), 1000);
+  timeOut() {
+    return html`
+      <div id="time">00:00</div>
+      <div class='title'>Time is up</div>
+      <button id="btn-time-out" @click=${this.resetTimer}>Reset</button>
+    `;
+  }
+
+  chooseAction() {
+    return html`
+      <div class="action-title">${this.action.title}</div>
+      <div class="period-chooser">
+        ${this.periods.map(period => html`
+          <div class="period" @click=${() => this.commitAction(period)}
+          >${period}</div>
+        `)}
+        <div class="period break" @click=${this.switchAction}
+          >${this.action.oppsiteName}</div>
+      </div>
+    `;
+  }
+
+  doCountDown() {
+    return html`
+      <div class='count-down-title'>${this.action.title}</div>
+      <div id="time">${this.showTime(this.curTime)}</div>
+      ${this.action.actions.map(action => html`
+        <button id=${action.name} @click=${action.action}>${action.name}</button>
+      `)}
+    `;
+  }
+
+  switchAction() {
+    if (this.action.id === 0) { //work
+      this.action.title = "Take a break";
+      this.action.name = "Break";
+      this.action.oppsiteName = "Work";
+      this.action.id = 1;
+    }
+    else {
+      this.action.title = "Time to work";
+      this.action.name = "Work";
+      this.action.oppsiteName = "Break";
+      this.action.id = 0;
+    }
+    this.requestUpdate();
+  }
+
+
+  commitAction(period) {
+    this.action.actions = [
+      { name: "Pause", action: this.pauseTimer },
+      { name: "Reset", action: this.resetTimer },
+    ];
+    if (this.action.id === 0) //work 
+      this.action.title = "Keep working";
+    else
+      this.action.title = "Relax a bit";
+    this.startTimer(minToMill(period));
+  }
+
+  countDown() {
+    this.curTime = this.endTime - Date.now();
+    if (this.curTime <= 0)
+      this.timeIsOut();
+    document.title = this.showTime(this.curTime);
+  }
+
+  startTimer(period) {
+    this.endTime = new Date().getTime() + period;
+    this.timer = setImInterval(() => this.countDown(), 1000);
     this.status = Statuses.CountDown;
   }
 
   timeIsOut() {
     this.curTime = 0;
     this.status = Statuses.TimeIsOut;
-    //this.resetTimer();
+    clearTimeout(this.timer);
+    this.timer = setImInterval(() => this.sound.play(), 1000);
+    document.title = "Cucu";
   }
 
   resetTimer() {
-    this.actions = [ "Start", "Nothing" ];
     this.curTime = this.period;
     clearTimeout(this.timer);
     this.status = Statuses.WaitForResponse;
+    document.title = "Cucu";
+
+
+    this.action.title = "Time to work";
   }
 
   pauseTimer() {
-    this.actions = [ "Reset", "Resume" ];
-    this.pauseTime = new Date().getTime();
+    this.pauseTime = Date.now();
     clearTimeout(this.timer);
-    this.status = Statuses.Pause;
+    document.title = "Paused";
+    //this.status = Statuses.Pause;
+
+    this.action.actions[0] = { name: "Resume", action: this.resumeTimer };
+    this.action.oldTitle = this.action.title;
+    this.action.title = "Paused";
+    this.requestUpdate()
   }
 
   resumeTimer() {
-    this.actions = [ "Reset", "Pause" ];
-    let now = new Date().getTime();
-    this.endTime += (now - this.pauseTime);
-    this.timer = setInterval(() => this.countDown(), 1000);
-    this.status = Statuses.CountDown;
+    this.endTime += (Date.now() - this.pauseTime);
+    this.timer = setImInterval(() => this.countDown(), 1000);
+    //this.status = Statuses.CountDown;
+
+    this.action.actions[0] = { name: "Pause", action: this.pauseTimer };
+    this.action.title = this.action.oldTitle;
+    this.requestUpdate()
   }
 
-  playAction(action) {
-    switch (action) {
-      case "Start": this.startTimer(); break;
-      case "Reset": this.resetTimer(); break;
-      case "Pause": this.pauseTimer(); break;
-      case "Resume": this.resumeTimer(); break;
-    }
-    this.requestUpdate();
-  }
-
-  showTime(mils) {
-    let mins = Math.floor(mils / 60000);
-    let secs = Math.floor((mils / 1000) % 60);
-
-    let ret = "";
-    if (mins < 10) ret += "0";
-    ret += mins + ':';
-    if (secs < 10) ret += "0";
-    ret += secs;
-
-    return ret;
+  showTime(millis) {
+    let minutes = Math.floor(millis / 60000);
+    let seconds = ((millis % 60000) / 1000).toFixed(0);
+    let format = minutes < 10 ? '0' + minutes : minutes;
+    format += ':' + (seconds < 10 ? '0' : '') + seconds;
+    return format;
   }
 }
 
