@@ -1,4 +1,4 @@
-import { LitElement, html, css } from 'lit-element'
+import { LitElement, html, css, svg } from 'lit-element'
 import { style } from '../css/app-style.js'
 
 const Statuses = Object.freeze({
@@ -32,12 +32,25 @@ class Cucu extends LitElement {
       choosingAction: "choosing-action",
     };
 
+    this.sound = new Audio("../assets/sound.wav");
     this.periods = [ 15, 10, 1/10, 25, 45 ];
 
-    this.period = minToMill(15); //min
-    this.curTime = this.period;
-    this.status = Statuses.WaitForResponse;
-    this.sound = new Audio("../assets/sound.wav");
+    this.actionList = {
+      work: {
+        title: "Time to work",
+        name: "Work",
+        oppositeName: "Break",
+        action: '',
+        id: 0
+      },
+      break: {
+        title: "Relax a bit",
+        name: "Break",
+        oppositeName: "Work",
+        action: '',
+        id: 1
+      }
+    };
 
     this.actions = [ "Work", "Break" ];
     this.action = {
@@ -47,6 +60,7 @@ class Cucu extends LitElement {
       action: '',
       id: 0
     }
+    this.status = Statuses.WaitForResponse;
   }
 
   render() {
@@ -83,11 +97,13 @@ class Cucu extends LitElement {
       <div class="action-title">${this.action.title}</div>
       <div class="period-chooser">
         ${this.periods.map(period => html`
-          <div class="period" @click=${() => this.commitAction(period)}
-          >${period}</div>
+          <div class="period break" @click=${() => this.commitAction(period)}>
+            ${period}
+          </div>
         `)}
-        <div class="period break" @click=${this.switchAction}
-          >${this.action.oppsiteName}</div>
+        <div class="period ${this.action.name}" @click=${this.switchAction}>
+          ${this.action.oppsiteName}
+        </div>
       </div>
     `;
   }

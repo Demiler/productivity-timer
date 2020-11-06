@@ -69,9 +69,9 @@ export const style = css`
   }
 
   .period {
-    background-color: #4b4b5c;
+    background-color: #424294;
     border-radius: 50%;
-    border: 5px solid #5b5b63;
+    border: 5px solid #3b3a76;
     width: 80px;
     height: 80px;
     display: flex;
