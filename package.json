@@ -27,6 +27,7 @@
     "webpack-merge": "^5.0.9"
   },
   "dependencies": {
+    "fastify": "^3.7.0",
     "lit-element": "^2.4.0"
   }
 }
