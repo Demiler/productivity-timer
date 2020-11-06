@@ -15,6 +15,13 @@ const setImInterval = (func, delay, ...args) => {
 
 const minToMill = (mins) => { return mins * 60000 };
 
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', event => {
+  event.preventDefault();
+  deferredPrompt = event;
+});
+
+
 class Cucu extends LitElement {
   static get styles() {
     return style;
@@ -67,8 +74,18 @@ class Cucu extends LitElement {
     return html`
       <div class="container">
         ${this.drawCurrentStatus()}
+        <button id="btn-install" @click=${this.installApp}>Install me</button>
       </div>
     `;
+  }
+
+  installApp() {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(res => {
+      if (res.outcome === "accepted")
+        console.log('User accepted the  A2HS prompt');
+      deferredPrompt = null;
+    });
   }
 
   drawCurrentStatus() {

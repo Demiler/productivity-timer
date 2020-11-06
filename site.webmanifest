@@ -23,13 +23,13 @@
       "type": "image/png"
     },
     {
-      "src": "favicon/favicon-32x32.ico", 
+      "src": "favicon/favicon-32x32.png", 
       "sizes": "32x32",
-      "type": "image/ico"
+      "type": "image/png"
     },
     {
       "src": "/favicon.ico", 
-      "sizes": "16x16",
+      "sizes": "48x48",
       "type": "image/ico"
     }
   ],
